@@ -1,4 +1,4 @@
-# Perussi Modernizado
+# Perussi
 
 Stack:
 - React + Vite + TypeScript
