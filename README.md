@@ -1,14 +1,18 @@
 # Perussi
 
-Conexão com Mercado Pago Orders e aprovação de PIX fictício verificadas com PostgreSQL isolado. O recebimento de webhook foi validado pelo simulador oficial; a entrega espontânea ainda não foi confirmada. Resultados e limites em [TESTE_MERCADO_PAGO.md](TESTE_MERCADO_PAGO.md).
+Conexão com Mercado Pago Orders e aprovação de PIX fictício verificadas com PostgreSQL isolado. O recebimento de webhook foi validado pelo simulador oficial; a entrega espontânea ainda não foi confirmada. Resultados e limites em [TESTE_MERCADO_PAGO.md](docs/TESTE_MERCADO_PAGO.md).
 
 Pagamentos pendentes com ID remoto são consultados automaticamente como recuperação para notificações ausentes. O intervalo entre ciclos é de 60 segundos (`pagamentos.conciliacao.intervalo-ms`); o tempo efetivo depende das chamadas anteriores e da disponibilidade do provedor. A confirmação exige valor e vínculo corretos. Erros mantêm a reserva e são tentados novamente. Pedidos sem ID remoto exigem recuperação pelo fluxo existente ou conciliação manual. Para grande volume, usar paginação e controle de taxa antes de ampliar essa rotina.
 
 Loja virtual com React 18, TypeScript, Vite, Tailwind, Spring Boot 3.4 e PostgreSQL.
 
-## Pasta principal
+## Estrutura do projeto
 
-Trabalhe em `frontend/` e `backend/` desta raiz. A subpasta `Perussi-main/` é uma cópia anterior preservada e não recebe estas correções. Ela ainda contém as configurações e falhas antigas; não a use para executar ou publicar o projeto.
+- `frontend/src/pages/`: telas agrupadas em catálogo (`catalog`), conta (`account`), pedidos (`orders`) e administração (`admin`). As URLs são definidas em `frontend/src/App.tsx`.
+- `backend/src/main/java/com/perussi/`: API Spring com controladores, serviços, repositórios e modelos. O pacote `service/recuperacao/` reúne a redefinição de senha e os adaptadores de envio.
+- `docs/`: [recuperação de senha](docs/RECUPERACAO_SENHA.md) e [testes de pagamento](docs/TESTE_MERCADO_PAGO.md).
+- `scripts/`: utilitários de desenvolvimento. O ambiente de testes e seus dados ficam em `.tools/`.
+
 
 ## Requisitos
 
@@ -101,4 +105,4 @@ Os testes de integração usam H2 em memória para executar transações concorr
 Referência da integração: [PIX e chave de idempotência na documentação do Mercado Pago](https://www.mercadopago.com.br/developers/pt/docs/checkout-api-payments/integration-configuration/integrate-pix?scope=prod).
 
 ### Entrega local
-Novos pedidos: apenas Curitiba/PR, validada pelo CEP no servidor; frete fixo de R$ 15,00 incluído no total do PIX. Fora de Curitiba a finalização é bloqueada. Pedidos anteriores não recebem frete retroativo. Detalhes e validação em TESTE_MERCADO_PAGO.md (28/10/2026).
+Novos pedidos: apenas Curitiba/PR, validada pelo CEP no servidor; frete fixo de R$ 15,00 incluído no total do PIX. Fora de Curitiba a finalização é bloqueada. Pedidos anteriores não recebem frete retroativo. Detalhes e validação em docs/TESTE_MERCADO_PAGO.md (28/10/2026).

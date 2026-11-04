@@ -1,4 +1,4 @@
-package com.perussi.service;
+package com.perussi.service.recuperacao;
 
 import com.perussi.model.Usuario;
 import com.perussi.repository.UsuarioRepository;

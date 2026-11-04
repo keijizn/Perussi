@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { api } from '../services/api'
-import { useAuth } from '../contexts/AuthContext'
-import { useCart } from '../contexts/CartContext'
+import { api } from '../../services/api'
+import { useAuth } from '../../contexts/AuthContext'
+import { useCart } from '../../contexts/CartContext'
 import { Link } from 'react-router-dom'
 
 type Produto = {

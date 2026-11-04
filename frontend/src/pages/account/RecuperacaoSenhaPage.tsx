@@ -1,8 +1,8 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { api } from '../services/api'
-import { useAuth } from '../contexts/AuthContext'
+import { api } from '../../services/api'
+import { useAuth } from '../../contexts/AuthContext'
 
 export default function RecuperacaoSenhaPage({ redefinir = false }: { redefinir?: boolean }) {
   const navigate = useNavigate()

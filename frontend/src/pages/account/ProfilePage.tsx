@@ -1,9 +1,9 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
-import { api } from '../services/api'
-import { useAuth } from '../contexts/AuthContext'
-import { useCart } from '../contexts/CartContext'
+import { api } from '../../services/api'
+import { useAuth } from '../../contexts/AuthContext'
+import { useCart } from '../../contexts/CartContext'
 
 type Usuario = {
   id: string

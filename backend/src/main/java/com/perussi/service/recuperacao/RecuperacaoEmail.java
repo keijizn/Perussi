@@ -1,4 +1,4 @@
-package com.perussi.service;
+package com.perussi.service.recuperacao;
 
 public interface RecuperacaoEmail {
     boolean habilitado();

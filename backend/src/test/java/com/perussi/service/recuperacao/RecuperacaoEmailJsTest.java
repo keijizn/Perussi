@@ -1,4 +1,4 @@
-package com.perussi.service;
+package com.perussi.service.recuperacao;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;

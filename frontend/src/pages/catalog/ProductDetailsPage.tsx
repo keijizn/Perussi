@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
-import { api } from '../services/api'
-import { useCart } from '../contexts/CartContext'
+import { api } from '../../services/api'
+import { useCart } from '../../contexts/CartContext'
 
 type Produto = {
   id: string

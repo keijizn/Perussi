@@ -1,8 +1,8 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { useCart } from '../contexts/CartContext'
-import { api } from '../services/api'
+import { useCart } from '../../contexts/CartContext'
+import { api } from '../../services/api'
 
 type Entrega = {
   cep: string

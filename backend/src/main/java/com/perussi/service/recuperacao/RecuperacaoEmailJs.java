@@ -1,4 +1,4 @@
-package com.perussi.service;
+package com.perussi.service.recuperacao;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
