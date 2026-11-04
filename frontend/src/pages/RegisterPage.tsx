@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react'
+import { isAxiosError } from 'axios'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -37,8 +38,21 @@ export default function RegisterPage() {
       })
 
       navigate('/login')
-    } catch {
-      setErro('Não foi possível criar a conta.')
+    } catch (error: unknown) {
+      let mensagem = 'Não foi possível criar a conta. Tente novamente.'
+      if (isAxiosError(error)) {
+        if (!error.response) {
+          mensagem = 'Não foi possível conectar à loja. Verifique sua conexão e tente novamente.'
+        } else if ([400, 409].includes(error.response.status)) {
+          const data = error.response.data
+          const detalhes = Array.isArray(data?.mensagens)
+            ? data.mensagens.filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0)
+            : []
+          if (detalhes.length) mensagem = detalhes.join(' ')
+          else if (typeof data?.erro === 'string' && data.erro.trim()) mensagem = data.erro
+        }
+      }
+      setErro(mensagem)
     } finally {
       setCarregando(false)
     }
@@ -111,7 +125,7 @@ export default function RegisterPage() {
           </div>
 
           {erro && (
-            <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
+            <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
               {erro}
             </p>
           )}

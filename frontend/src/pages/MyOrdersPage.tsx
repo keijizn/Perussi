@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../services/api'
 
 type PedidoItem = {
@@ -13,6 +14,8 @@ type PedidoItem = {
 type Pedido = {
   id: string
   total: number
+  subtotal: number
+  frete: number | null
   status: string
   metodoPagamento: string
   criadoEm: string
@@ -29,6 +32,7 @@ type Pedido = {
 export default function MyOrdersPage() {
   const [pedidos, setPedidos] = useState<Pedido[]>([])
   const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState('')
 
   function formatarMetodoPagamento(metodo?: string) {
     if (metodo === 'PIX') return 'PIX'
@@ -36,16 +40,20 @@ export default function MyOrdersPage() {
     return '-'
   }
 
-  useEffect(() => {
-    async function carregarPedidos() {
+  async function carregarPedidos() {
+      setCarregando(true)
+      setErro('')
       try {
         const response = await api.get('/pedidos/meus')
         setPedidos(response.data)
+      } catch {
+        setErro('Não foi possível carregar seus pedidos. Tente novamente.')
       } finally {
         setCarregando(false)
       }
-    }
+  }
 
+  useEffect(() => {
     carregarPedidos()
   }, [])
 
@@ -63,9 +71,15 @@ export default function MyOrdersPage() {
         </p>
       </div>
 
+      <button type="button" onClick={carregarPedidos} disabled={carregando} className="mb-6 rounded-full border border-black/10 px-5 py-3 text-sm dark:border-white/10 disabled:opacity-50">
+        Atualizar pedidos
+      </button>
+
+      {erro && <p role="alert" className="mb-6 text-red-500">{erro}</p>}
+
       {carregando ? (
         <p className="text-zinc-500">Carregando pedidos...</p>
-      ) : pedidos.length === 0 ? (
+      ) : erro ? null : pedidos.length === 0 ? (
         <div className="rounded-[2rem] border border-black/10 bg-white/70 p-10 text-center shadow-xl shadow-black/5 dark:border-white/10 dark:bg-white/5">
           <h2 className="font-display text-3xl font-semibold">
             Nenhum pedido encontrado
@@ -102,13 +116,28 @@ export default function MyOrdersPage() {
                     {pedido.status}
                   </span>
                   <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                    Pagamento:{' '}
                     Pagamento: {formatarMetodoPagamento(pedido.metodoPagamento)}
                   </p>
 
+                  <p className="text-sm">Produtos: R$ {pedido.subtotal.toFixed(2).replace('.', ',')}</p>
+                  <p className="text-sm">Frete: {pedido.frete == null ? 'Não registrado (pedido anterior)' : `R$ ${pedido.frete.toFixed(2).replace('.', ',')}`}</p>
                   <strong className="text-xl">
                     R$ {pedido.total.toFixed(2).replace('.', ',')}
                   </strong>
+                  {pedido.status === 'PENDENTE' && (
+                    <div className="mt-3 flex max-w-sm flex-col gap-2 md:items-end">
+                      <Link
+                        to={`/pagamento/${pedido.id}`}
+                        aria-label={`Retomar pagamento do pedido ${pedido.id.slice(0, 8)}`}
+                        className="rounded-full bg-zinc-950 px-6 py-3 text-center text-sm font-medium text-white dark:bg-white dark:text-zinc-950"
+                      >
+                        Retomar pagamento
+                      </Link>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400 md:text-right">
+                        Recupera o PIX deste pedido, se a reserva ainda estiver válida.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 

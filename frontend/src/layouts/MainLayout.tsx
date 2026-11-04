@@ -21,7 +21,7 @@ export default function MainLayout() {
   return (
     <div className="min-h-screen bg-[#f8f3ef] text-zinc-950 transition-colors dark:bg-zinc-950 dark:text-zinc-50">
       <header className="sticky top-0 z-50 border-b border-black/10 bg-[#f8f3ef]/80 backdrop-blur-xl transition-colors dark:border-white/10 dark:bg-zinc-950/80">
-        <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+        <nav className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 md:py-5">
           <Link
             to="/"
             className="font-display text-2xl font-semibold tracking-[0.45em] transition hover:text-[#b98b7d]"
@@ -105,6 +105,8 @@ export default function MainLayout() {
                 <button
                   type="button"
                   onClick={() => setMenuAberto((aberto) => !aberto)}
+                  aria-expanded={menuAberto}
+                  aria-controls="menu-conta"
                   className="flex items-center gap-2 rounded-full border border-black/10 bg-white/60 px-4 py-2.5 text-sm transition hover:border-[#b98b7d] hover:text-[#b98b7d] dark:border-white/10 dark:bg-white/5"
                 >
                   Olá, {user?.nome}
@@ -112,7 +114,14 @@ export default function MainLayout() {
                 </button>
 
                 {menuAberto && (
-                  <div className="absolute right-0 mt-2 w-52 overflow-hidden rounded-2xl border border-black/10 bg-white shadow-xl shadow-black/10 dark:border-white/10 dark:bg-zinc-900">
+                  <div id="menu-conta" className="absolute right-0 mt-2 w-52 overflow-hidden rounded-2xl border border-black/10 bg-white shadow-xl shadow-black/10 dark:border-white/10 dark:bg-zinc-900">
+                    <Link
+                      to="/meus-pedidos"
+                      onClick={() => setMenuAberto(false)}
+                      className="block px-4 py-3 text-sm transition hover:bg-black/5 dark:hover:bg-white/5"
+                    >
+                      Meus Pedidos
+                    </Link>
                     <Link
                       to="/perfil"
                       onClick={() => setMenuAberto(false)}
@@ -143,6 +152,16 @@ export default function MainLayout() {
               </Link>
             )}
           </div>
+        </nav>
+        <nav aria-label="Navegação no celular" className="flex flex-wrap gap-x-5 border-t border-black/10 px-4 text-sm dark:border-white/10 md:hidden">
+          <Link to="/produtos" className="py-3 hover:text-[#b98b7d]">Produtos</Link>
+          {isAuthenticated && <Link to="/meus-pedidos" className="py-3 hover:text-[#b98b7d]">Meus Pedidos</Link>}
+          <Link to="/sobre" className="py-3 hover:text-[#b98b7d]">Sobre</Link>
+          {isAdmin && <>
+            <Link to="/admin" className="py-3 hover:text-[#b98b7d]">Dashboard</Link>
+            <Link to="/admin/produtos" className="py-3 hover:text-[#b98b7d]">Admin Produtos</Link>
+            <Link to="/admin/pedidos" className="py-3 hover:text-[#b98b7d]">Admin Pedidos</Link>
+          </>}
         </nav>
       </header>
 

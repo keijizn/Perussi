@@ -167,13 +167,13 @@ export default function CartPage() {
 
               <div className="flex justify-between text-zinc-600 dark:text-zinc-300">
                 <span>Entrega</span>
-                <span>Calculada no checkout</span>
+                <span>R$ 15,00 · somente Curitiba</span>
               </div>
 
               <div className="border-t border-black/10 pt-4 dark:border-white/10">
                 <div className="flex justify-between text-lg font-semibold">
-                  <span>Total</span>
-                  <span>R$ {totalCarrinho.toFixed(2).replace('.', ',')}</span>
+                  <span>Total com entrega</span>
+                  <span>R$ {(totalCarrinho + 15).toFixed(2).replace('.', ',')}</span>
                 </div>
               </div>
             </div>

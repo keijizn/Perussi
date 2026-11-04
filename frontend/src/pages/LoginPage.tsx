@@ -1,10 +1,11 @@
 import { FormEvent, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const location = useLocation()
+  const { login, sessaoExpirada } = useAuth()
 
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
@@ -45,6 +46,14 @@ export default function LoginPage() {
 
       <div className="rounded-[2rem] border border-black/10 bg-white/70 p-8 shadow-2xl shadow-black/10 backdrop-blur-md dark:border-white/10 dark:bg-white/5">
         <h2 className="font-display text-3xl font-semibold">Login</h2>
+        {location.state?.senhaRedefinida && <p role="status" className="mt-4 text-sm">Senha alterada. Entre com sua nova senha.</p>}
+        {location.state?.perfilAtualizado && <p role="status" className="mt-4 text-sm">Dados atualizados. Entre novamente com seu email e senha atuais.</p>}
+
+        {sessaoExpirada && (
+          <p role="status" className="mt-4 rounded-2xl bg-[#f2ddd5] px-4 py-3 text-sm text-zinc-900 dark:bg-[#b98b7d]/20 dark:text-zinc-100">
+            Sua sessão expirou. Entre novamente para continuar.
+          </p>
+        )}
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-5">
           <div>
@@ -84,6 +93,7 @@ export default function LoginPage() {
           </button>
         </form>
 
+        <p className="mt-5 text-center text-sm"><Link to="/esqueci-senha" className="underline">Esqueci minha senha</Link></p>
         <p className="mt-6 text-center text-sm text-zinc-600 dark:text-zinc-300">
           Ainda não tem conta?{' '}
           <Link to="/cadastro" className="font-medium text-[#b98b7d]">

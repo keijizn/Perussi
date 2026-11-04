@@ -25,5 +25,13 @@ public class Usuario {
 
     private String senha;
 
+    private String versaoSessao;
+
+    @Column(unique = true, length = 64)
+    private String recuperacaoHash;
+    private java.time.Instant recuperacaoExpiraEm;
+    private java.time.Instant recuperacaoSolicitadaEm;
+    private String recuperacaoVersaoSessao;
+
     private String role;
 }

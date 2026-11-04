@@ -4,13 +4,13 @@ import { useNavigate } from 'react-router-dom'
 import { useCart } from '../contexts/CartContext'
 import { api } from '../services/api'
 
-type ViaCepResponse = {
+type Entrega = {
   cep: string
   logradouro: string
   bairro: string
-  localidade: string
-  uf: string
-  erro?: boolean
+  cidade: string
+  estado: string
+  frete: number
 }
 
 type EnderecoUsuario = {
@@ -35,6 +35,8 @@ export default function CheckoutPage() {
   const [estado, setEstado] = useState('')
   const [complemento, setComplemento] = useState('')
 
+  const [tentativaCep, setTentativaCep] = useState(0)
+  const [entrega, setEntrega] = useState<Entrega | null>(null)
   const [buscandoCep, setBuscandoCep] = useState(false)
   const [finalizando, setFinalizando] = useState(false)
   const [erro, setErro] = useState('')
@@ -61,41 +63,40 @@ export default function CheckoutPage() {
     carregarEnderecoPadrao()
   }, [])
 
-  async function buscarCep(valor: string) {
-    const cepLimpo = valor.replace(/\D/g, '')
-
-    setCep(valor)
-
-    if (cepLimpo.length !== 8) {
-      return
-    }
-
-    setBuscandoCep(true)
+  useEffect(() => {
+    let cancelado = false
+    setEntrega(null)
+    setBuscandoCep(false)
     setErro('')
-
-    try {
-      const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
-      const data: ViaCepResponse = await response.json()
-
-      if (data.erro) {
-        setErro('CEP não encontrado.')
-        return
+    if (!/^\d{5}-?\d{3}$/.test(cep.trim())) return
+    setBuscandoCep(true)
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await api.get<Entrega>('/pedidos/entrega', { params: { cep } })
+        if (cancelado) return
+        const data = response.data
+        setEntrega(data)
+        setLogradouro(data.logradouro || '')
+        setBairro(data.bairro || '')
+        setCidade(data.cidade)
+        setEstado(data.estado)
+      } catch (error: any) {
+        if (!cancelado) setErro(error.response?.data?.erro || 'Não foi possível validar o CEP. Tente novamente.')
+      } finally {
+        if (!cancelado) setBuscandoCep(false)
       }
-
-      setLogradouro(data.logradouro || '')
-      setBairro(data.bairro || '')
-      setCidade(data.localidade || '')
-      setEstado(data.uf || '')
-    } catch {
-      setErro('Não foi possível buscar o CEP.')
-    } finally {
-      setBuscandoCep(false)
-    }
-  }
+    }, 350)
+    return () => { cancelado = true; window.clearTimeout(timer) }
+  }, [cep, tentativaCep])
 
   async function finalizarPedido(event: FormEvent) {
     event.preventDefault()
     setErro('')
+
+    if (!entrega || entrega.cep !== cep.replace('-', '').trim()) {
+      setErro('Informe um CEP válido de Curitiba e aguarde a validação da entrega.')
+      return
+    }
 
     if (itens.length === 0) {
       setErro('Seu carrinho está vazio.')
@@ -123,8 +124,8 @@ export default function CheckoutPage() {
       await carregarCarrinho()
 
       navigate(`/pagamento/${response.data.id}`)
-    } catch {
-      setErro('Não foi possível finalizar o pedido.')
+    } catch (error: any) {
+      setErro(error.response?.data?.erro || 'Não foi possível finalizar o pedido.')
     } finally {
       setFinalizando(false)
     }
@@ -140,7 +141,7 @@ export default function CheckoutPage() {
         <h1 className="font-display text-5xl font-semibold">Checkout</h1>
 
         <p className="mt-3 text-zinc-600 dark:text-zinc-300">
-          Informe o endereço de entrega.
+          Entregamos somente em Curitiba (PR), com frete fixo de R$ 15,00 por pedido.
         </p>
       </div>
 
@@ -153,11 +154,19 @@ export default function CheckoutPage() {
           <div className="space-y-4">
             <input
               value={cep}
-              onChange={(event) => buscarCep(event.target.value)}
+              onChange={(event) => { setEntrega(null); setCep(event.target.value) }}
+              inputMode="numeric"
+              maxLength={9}
+              aria-label="CEP"
               placeholder="CEP"
               className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-[#b98b7d] dark:border-white/10 dark:bg-zinc-900"
             />
 
+            {!entrega && !buscandoCep && /^\d{5}-?\d{3}$/.test(cep.trim()) && (
+              <button type="button" onClick={() => setTentativaCep((n) => n + 1)} className="text-sm underline">
+                Validar CEP novamente
+              </button>
+            )}
             {buscandoCep && (
               <p className="text-sm text-zinc-500">Buscando CEP...</p>
             )}
@@ -195,14 +204,14 @@ export default function CheckoutPage() {
             <div className="grid gap-4 md:grid-cols-[1fr_120px]">
               <input
                 value={cidade}
-                onChange={(event) => setCidade(event.target.value)}
+                readOnly
                 placeholder="Cidade"
                 className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-[#b98b7d] dark:border-white/10 dark:bg-zinc-900"
               />
 
               <input
                 value={estado}
-                onChange={(event) => setEstado(event.target.value)}
+                readOnly
                 placeholder="UF"
                 maxLength={2}
                 className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 uppercase outline-none transition focus:border-[#b98b7d] dark:border-white/10 dark:bg-zinc-900"
@@ -251,20 +260,20 @@ export default function CheckoutPage() {
 
             <div className="flex justify-between text-sm text-zinc-600 dark:text-zinc-300">
               <span>Entrega</span>
-              <span>Calculada posteriormente</span>
+              <span>{entrega ? 'R$ 15,00' : 'Informe um CEP de Curitiba'}</span>
             </div>
 
             <div className="border-t border-black/10 pt-4 dark:border-white/10">
               <div className="flex justify-between text-lg font-semibold">
                 <span>Total</span>
-                <span>R$ {totalCarrinho.toFixed(2).replace('.', ',')}</span>
+                <span>{entrega ? `R$ ${(totalCarrinho + entrega.frete).toFixed(2).replace('.', ',')}` : 'Aguardando CEP'}</span>
               </div>
             </div>
           </div>
 
           <button
             type="submit"
-            disabled={finalizando || itens.length === 0}
+            disabled={finalizando || buscandoCep || !entrega || itens.length === 0}
             className="mt-8 flex w-full justify-center rounded-full bg-zinc-950 px-6 py-3 text-sm font-medium text-white transition hover:bg-[#b98b7d] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950"
           >
             {finalizando ? 'Finalizando...' : 'Finalizar pedido'}

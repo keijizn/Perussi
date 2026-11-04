@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import com.auth0.jwt.exceptions.JWTVerificationException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -28,7 +30,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getServletPath();
+        String path = request.getPathInfo();
+        if (path == null) path = request.getServletPath();
         return path.startsWith("/auth/");
     }
 
@@ -46,19 +49,25 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        String token = authHeader.replace("Bearer ", "");
-        String email = jwtService.validateToken(token);
+        try {
+            String token = authHeader.substring(7);
+            String email = jwtService.validateToken(token);
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+            UserDetails userDetails = userDetailsService.loadSession(email, token);
 
-        UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities()
-                );
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        } catch (JWTVerificationException | UsernameNotFoundException exception) {
+            SecurityContextHolder.clearContext();
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Sessão inválida ou expirada");
+            return;
+        }
 
         filterChain.doFilter(request, response);
     }

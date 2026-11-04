@@ -135,10 +135,11 @@ public class ProdutoService {
                 produtoRepository.delete(produto);
         }
 
+        @org.springframework.transaction.annotation.Transactional
         public ProdutoVariacaoDTO atualizarVariacao(
                         UUID id,
                         ProdutoVariacaoRequestDTO dto) {
-                ProdutoVariacao variacao = produtoVariacaoRepository.findById(id)
+                ProdutoVariacao variacao = produtoVariacaoRepository.findLockedById(id)
                                 .orElseThrow(() -> new ResponseStatusException(
                                                 HttpStatus.NOT_FOUND,
                                                 "Variação não encontrada"));

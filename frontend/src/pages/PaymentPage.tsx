@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../services/api'
 
 function formatarNumeroCartao(valor: string) {
@@ -35,6 +35,7 @@ export default function PaymentPage() {
   const { pedidoId } = useParams()
   const navigate = useNavigate()
 
+  const [resumo, setResumo] = useState<{ subtotal: number; frete: number | null; total: number } | null>(null)
   const [metodoPagamento, setMetodoPagamento] = useState('PIX')
   const [carregando, setCarregando] = useState(false)
   const [numeroCartao, setNumeroCartao] = useState('')
@@ -44,33 +45,44 @@ export default function PaymentPage() {
   const [mensagem, setMensagem] = useState('')
   const [verificando, setVerificando] = useState(true)
   const [pagamentoPix, setPagamentoPix] = useState<PagamentoPix | null>(null)
+  const [reservaEncerrada, setReservaEncerrada] = useState(false)
+  const consultandoPix = useRef(false)
 
   useEffect(() => {
+    let cancelado = false
+    setVerificando(true)
+    setResumo(null)
+    setPagamentoPix(null)
+    setReservaEncerrada(false)
     async function verificarPedido() {
       try {
         const response = await api.get(`/pedidos/${pedidoId}/meu`)
 
+        if (cancelado) return
         if (response.data.status !== 'PENDENTE') {
           navigate('/meus-pedidos')
           return
         }
+        setResumo(response.data)
       } catch {
-        navigate('/meus-pedidos')
+        if (!cancelado) navigate('/meus-pedidos')
       } finally {
-        setVerificando(false)
+        if (!cancelado) setVerificando(false)
       }
     }
 
     verificarPedido()
+    return () => { cancelado = true }
   }, [pedidoId, navigate])
 
   useEffect(() => {
-    if (!verificando && metodoPagamento === 'PIX' && !pagamentoPix) {
+    if (!verificando && resumo && metodoPagamento === 'PIX' && !pagamentoPix) {
       gerarPix()
     }
-  }, [verificando, metodoPagamento])
+  }, [verificando, metodoPagamento, resumo])
 
   async function gerarPix() {
+    if (consultandoPix.current || reservaEncerrada || !resumo || verificando) return
     setMensagem('')
     setPagamentoPix(null)
 
@@ -80,6 +92,7 @@ export default function PaymentPage() {
     }
 
     try {
+      consultandoPix.current = true
       setCarregando(true)
 
       const response = await api.post('/pagamentos/criar', {
@@ -88,13 +101,32 @@ export default function PaymentPage() {
       })
 
       setPagamentoPix(response.data)
-      setMensagem('PIX gerado com sucesso.')
-    } catch {
-      setMensagem('Erro ao gerar pagamento PIX.')
+      if (['approved', 'cancelled', 'rejected'].includes(response.data.status)) {
+        navigate('/meus-pedidos')
+        return
+      }
+      setMensagem('PIX disponível. Novas consultas recuperam o mesmo pagamento.')
+    } catch (error: any) {
+      if (error.response?.status === 409) setReservaEncerrada(true)
+      setMensagem(error.response?.data?.erro || 'Erro ao consultar pagamento PIX.')
     } finally {
+      consultandoPix.current = false
       setCarregando(false)
     }
   }
+
+  useEffect(() => {
+    if (!pagamentoPix || !pedidoId) return
+    const timer = window.setInterval(async () => {
+      try {
+        const response = await api.get(`/pedidos/${pedidoId}/meu`)
+        if (response.data.status !== 'PENDENTE') navigate('/meus-pedidos')
+      } catch {
+        setMensagem('Não foi possível atualizar o status. Consulte seus pedidos novamente.')
+      }
+    }, 5000)
+    return () => window.clearInterval(timer)
+  }, [pagamentoPix, pedidoId, navigate])
 
   async function copiarCodigoPix() {
     if (!pagamentoPix?.qrCode) return
@@ -138,6 +170,11 @@ export default function PaymentPage() {
         Escolha uma forma de pagamento para concluir seu pedido.
       </p>
 
+      {resumo && <div className="mt-6 space-y-2 rounded-2xl border border-black/10 p-4 dark:border-white/10">
+        <p>Produtos: R$ {resumo.subtotal.toFixed(2).replace('.', ',')}</p>
+        <p>Frete: {resumo.frete == null ? 'Não registrado (pedido anterior)' : `R$ ${resumo.frete.toFixed(2).replace('.', ',')}`}</p>
+        <p className="font-semibold">Total: R$ {resumo.total.toFixed(2).replace('.', ',')}</p>
+      </div>}
       <div className="mt-8 rounded-[2rem] border border-black/10 bg-white/70 p-8 shadow-xl shadow-black/5 dark:border-white/10 dark:bg-white/5">
         <label className="mb-4 block text-sm font-medium">
           Método de pagamento
@@ -182,8 +219,9 @@ export default function PaymentPage() {
 
         {metodoPagamento === 'PIX' && (
           <div className="mt-8 rounded-2xl border border-black/10 p-6 dark:border-white/10">
-            {pagamentoPix?.qrCodeBase64 ? (
+            {pagamentoPix?.qrCode ? (
               <>
+                {pagamentoPix.qrCodeBase64 && (
                 <div className="mx-auto flex h-64 w-64 items-center justify-center rounded-xl border border-black/10 bg-white p-4 text-center dark:border-white/10">
                   <img
                     src={`data:image/png;base64,${pagamentoPix.qrCodeBase64}`}
@@ -191,9 +229,10 @@ export default function PaymentPage() {
                     className="h-full w-full object-contain"
                   />
                 </div>
+                )}
 
                 <p className="mt-4 text-center text-sm text-zinc-500 dark:text-zinc-400">
-                  Escaneie o QR Code ou copie o código PIX abaixo.
+                  {pagamentoPix.qrCodeBase64 ? 'Escaneie o QR Code ou copie o código PIX abaixo.' : 'Copie o código PIX abaixo.'}
                 </p>
 
                 <div className="mt-4 rounded-2xl bg-black/5 p-4 dark:bg-white/5">
@@ -314,11 +353,15 @@ export default function PaymentPage() {
         <button
           type="button"
           onClick={gerarPix}
-          disabled={carregando}
-          className="..."
+          disabled={carregando || reservaEncerrada || !resumo || metodoPagamento !== 'PIX'}
+          className="mt-6 w-full rounded-full bg-zinc-950 px-6 py-4 text-white disabled:opacity-50 dark:bg-white dark:text-zinc-950"
         >
-          {carregando ? 'Gerando PIX...' : 'Gerar novo PIX'}
+          {carregando ? 'Consultando PIX...' : 'Gerar ou recuperar PIX'}
         </button>
+
+        <Link to="/meus-pedidos" className="mt-4 block text-center text-sm underline">
+          Voltar para Meus Pedidos
+        </Link>
 
         {pagamentoPix && (
           <button

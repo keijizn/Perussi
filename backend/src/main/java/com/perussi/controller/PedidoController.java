@@ -7,7 +7,6 @@ import com.perussi.service.PedidoService;
 import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import com.perussi.dto.ConfirmarPagamentoDTO;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,6 +26,11 @@ public class PedidoController {
             Authentication authentication,
             @Valid @RequestBody EnderecoPedidoDTO endereco) {
         return pedidoService.finalizarPedido(authentication.getName(), endereco);
+    }
+
+    @GetMapping("/entrega")
+    public com.perussi.service.EntregaService.Entrega entrega(@RequestParam String cep) {
+        return pedidoService.consultarEntrega(cep);
     }
 
     @GetMapping("/meus")
@@ -55,14 +59,4 @@ public class PedidoController {
                 pedidoId);
     }
 
-    @PutMapping("/{pedidoId}/pagamento")
-    public PedidoDTO confirmarPagamento(
-            Authentication authentication,
-            @PathVariable UUID pedidoId,
-            @RequestBody ConfirmarPagamentoDTO dto) {
-        return pedidoService.confirmarPagamento(
-                authentication.getName(),
-                pedidoId,
-                dto);
-    }
 }

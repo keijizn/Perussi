@@ -9,7 +9,7 @@ type Usuario = {
   id: string
   nome: string
   email: string
-  role: string
+  role: 'ADMIN' | 'CUSTOMER'
 }
 
 type Endereco = {
@@ -55,7 +55,7 @@ type ViaCepResponse = {
 
 export default function ProfilePage() {
   const navigate = useNavigate()
-  const { logout } = useAuth()
+  const { logout, atualizarUsuario } = useAuth()
   const { quantidadeTotal } = useCart()
 
   const [usuario, setUsuario] = useState<Usuario | null>(null)
@@ -65,6 +65,8 @@ export default function ProfilePage() {
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
+  const [senhaAtual, setSenhaAtual] = useState('')
+  const [salvandoPerfil, setSalvandoPerfil] = useState(false)
 
   const [cep, setCep] = useState('')
   const [logradouro, setLogradouro] = useState('')
@@ -106,6 +108,8 @@ export default function ProfilePage() {
 
       setPedidos(pedidosResponse.data)
       setFavoritos(favoritosResponse.data)
+    } catch {
+      setMensagem('Não foi possível carregar o perfil. Atualize a página para tentar novamente.')
     } finally {
       setCarregando(false)
     }
@@ -146,21 +150,34 @@ export default function ProfilePage() {
   }
 
   async function salvarPerfil() {
+    if (salvandoPerfil) return
     setMensagem('')
 
     try {
+      setSalvandoPerfil(true)
+      const alterarAcesso = email !== usuario?.email || senha.length > 0
       const response = await api.put('/usuarios/me', {
         nome,
         email,
         senha: senha || null,
+        senhaAtual: senhaAtual || null,
       })
 
+      if (alterarAcesso) {
+        logout()
+        navigate('/login', { replace: true, state: { perfilAtualizado: true } })
+        return
+      }
       setUsuario(response.data)
+      atualizarUsuario(response.data)
       setSenha('')
+      setSenhaAtual('')
       setEditando(false)
       setMensagem('Perfil atualizado com sucesso.')
-    } catch {
-      setMensagem('Erro ao atualizar perfil.')
+    } catch (error: any) {
+      setMensagem(error.response?.data?.mensagens?.join(' ') || error.response?.data?.erro || 'Erro ao atualizar perfil.')
+    } finally {
+      setSalvandoPerfil(false)
     }
   }
 
@@ -181,8 +198,8 @@ export default function ProfilePage() {
 
       setEditandoEndereco(false)
       setMensagem('Endereço padrão atualizado com sucesso.')
-    } catch {
-      setMensagem('Erro ao atualizar endereço.')
+    } catch (error: any) {
+      setMensagem(error.response?.data?.mensagens?.join(' ') || error.response?.data?.erro || 'Erro ao atualizar endereço.')
     }
   }
 
@@ -268,13 +285,21 @@ export default function ProfilePage() {
               )}
 
               {editando && (
+                <>
+                <label className="block text-sm">
+                  Senha atual (obrigatória para trocar email ou senha)
+                  <input value={senhaAtual} onChange={(event) => setSenhaAtual(event.target.value)} type="password" autoComplete="current-password"
+                    className="mt-2 w-full rounded-xl border border-black/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-zinc-900" />
+                </label>
                 <input
                   value={senha}
                   onChange={(event) => setSenha(event.target.value)}
                   placeholder="Nova senha opcional"
                   type="password"
+                  autoComplete="new-password"
                   className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-[#b98b7d] dark:border-white/10 dark:bg-zinc-900"
                 />
+                </>
               )}
 
               <div className="flex flex-wrap gap-3 pt-2">
@@ -291,6 +316,7 @@ export default function ProfilePage() {
                     <button
                       type="button"
                       onClick={salvarPerfil}
+                      disabled={salvandoPerfil}
                       className="rounded-full bg-zinc-950 px-6 py-3 text-sm font-medium text-white transition hover:bg-[#b98b7d] dark:bg-white dark:text-zinc-950"
                     >
                       Salvar alterações
@@ -303,6 +329,7 @@ export default function ProfilePage() {
                         setNome(usuario?.nome || '')
                         setEmail(usuario?.email || '')
                         setSenha('')
+                        setSenhaAtual('')
                       }}
                       className="rounded-full border border-black/10 px-6 py-3 text-sm transition hover:border-[#b98b7d] hover:text-[#b98b7d] dark:border-white/10"
                     >

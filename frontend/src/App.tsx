@@ -4,6 +4,7 @@ import MainLayout from './layouts/MainLayout'
 
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
+import RecuperacaoSenhaPage from './pages/RecuperacaoSenhaPage'
 import ProductsPage from './pages/ProductsPage'
 import FavoritesPage from './pages/FavoritesPage'
 import CartPage from './pages/CartPage'
@@ -26,6 +27,8 @@ export default function App() {
       <Route element={<MainLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/esqueci-senha" element={<RecuperacaoSenhaPage key="solicitar" />} />
+        <Route path="/redefinir-senha" element={<RecuperacaoSenhaPage key="redefinir" redefinir />} />
         <Route path="/produtos" element={<ProductsPage />} />
         <Route path="/favoritos" element={<FavoritesPage />} />
         <Route path="/carrinho" element={<CartPage />} />

@@ -29,4 +29,17 @@ public class SecurityUserDetailsService implements UserDetailsService {
                 )
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado"));
     }
+
+    // Called only after JwtService verifies the signature, issuer and expiry.
+    public UserDetails loadSession(String email, String token) {
+        var usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("Sessão inválida"));
+        var claims = com.auth0.jwt.JWT.decode(token);
+        String version = usuario.getVersaoSessao() == null ? "0" : usuario.getVersaoSessao();
+        if (!usuario.getId().toString().equals(claims.getClaim("uid").asString())
+                || !version.equals(claims.getClaim("session").asString()))
+            throw new UsernameNotFoundException("Sessão invalidada. Entre novamente.");
+        return org.springframework.security.core.userdetails.User.withUsername(usuario.getEmail())
+                .password(usuario.getSenha()).authorities(usuario.getRole()).build();
+    }
 }

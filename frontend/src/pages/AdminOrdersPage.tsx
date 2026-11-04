@@ -13,6 +13,8 @@ type PedidoItem = {
 type Pedido = {
   id: string
   total: number
+  subtotal: number
+  frete: number | null
   status: string
   metodoPagamento: string
   criadoEm: string
@@ -26,7 +28,13 @@ type Pedido = {
   itens: PedidoItem[]
 }
 
-const statusOptions = ['PENDENTE', 'PAGO', 'ENVIADO', 'ENTREGUE', 'CANCELADO']
+const proximosStatus: Record<string, string[]> = {
+  PENDENTE: ['PENDENTE', 'CANCELADO'],
+  PAGO: ['PAGO', 'ENVIADO'],
+  ENVIADO: ['ENVIADO', 'ENTREGUE'],
+  ENTREGUE: ['ENTREGUE'],
+  CANCELADO: ['CANCELADO'],
+}
 
 function formatarMetodoPagamento(metodo?: string) {
   if (metodo === 'PIX') return 'PIX'
@@ -62,9 +70,9 @@ export default function AdminOrdersPage() {
 
       await carregarPedidos()
 
-      setMensagem('Status atualizado com sucesso.')
-    } catch {
-      setMensagem('Erro ao atualizar status do pedido.')
+      setMensagem('Pedido atualizado. Confira o status: pagamentos já aprovados são preservados.')
+    } catch (error: any) {
+      setMensagem(error.response?.data?.erro || 'Erro ao atualizar status do pedido.')
     }
   }
 
@@ -131,6 +139,8 @@ export default function AdminOrdersPage() {
                     Pagamento: {formatarMetodoPagamento(pedido.metodoPagamento)}
                   </p>
 
+                  <p className="text-sm">Produtos: R$ {pedido.subtotal.toFixed(2).replace('.', ',')}</p>
+                  <p className="text-sm">Frete: {pedido.frete == null ? 'Não registrado (pedido anterior)' : `R$ ${pedido.frete.toFixed(2).replace('.', ',')}`}</p>
                   <strong className="text-xl">
                     R$ {pedido.total.toFixed(2).replace('.', ',')}
                   </strong>
@@ -197,7 +207,7 @@ export default function AdminOrdersPage() {
                       }
                       className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#b98b7d] dark:border-white/10 dark:bg-zinc-900"
                     >
-                      {statusOptions.map((status) => (
+                      {(proximosStatus[pedido.status] || [pedido.status]).map((status) => (
                         <option key={status} value={status}>
                           {status}
                         </option>

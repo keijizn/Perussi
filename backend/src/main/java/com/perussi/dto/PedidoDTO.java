@@ -11,6 +11,10 @@ public record PedidoDTO(
 
         BigDecimal total,
 
+        BigDecimal subtotal,
+
+        BigDecimal frete,
+
         String status,
 
         String metodoPagamento,

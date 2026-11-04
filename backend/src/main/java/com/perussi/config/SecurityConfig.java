@@ -37,6 +37,8 @@ public class SecurityConfig {
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(form -> form.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(errors -> errors.authenticationEntryPoint(
+                        (request, response, exception) -> response.sendError(401)))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
@@ -51,6 +53,7 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.POST, "/pedidos/finalizar").authenticated()
                         .requestMatchers(HttpMethod.GET, "/pedidos/meus").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/pedidos/entrega").authenticated()
 
                         .requestMatchers(HttpMethod.POST, "/produtos/**").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/produtos/**").hasAuthority("ADMIN")
@@ -75,7 +78,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/uploads/**").permitAll()
 
                         .requestMatchers(HttpMethod.GET, "/pedidos/*/meu").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/pedidos/*/pagamento").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/pedidos/*/pagamento").denyAll()
 
                         .requestMatchers(HttpMethod.GET, "/pedidos/**").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/pedidos/*/status").hasAuthority("ADMIN")

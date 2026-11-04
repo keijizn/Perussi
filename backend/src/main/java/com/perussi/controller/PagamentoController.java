@@ -3,6 +3,8 @@ package com.perussi.controller;
 import com.perussi.dto.CriarPagamentoDTO;
 import com.perussi.dto.PagamentoResponseDTO;
 import com.perussi.service.PagamentoService;
+import jakarta.validation.Valid;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,8 +19,9 @@ public class PagamentoController {
 
     @PostMapping("/criar")
     public PagamentoResponseDTO criarPagamento(
-            @RequestBody CriarPagamentoDTO dto
+            Authentication authentication,
+            @Valid @RequestBody CriarPagamentoDTO dto
     ) {
-        return pagamentoService.criarPagamento(dto);
+        return pagamentoService.criarPagamento(authentication.getName(), dto);
     }
 }

@@ -4,29 +4,38 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.perussi.model.Usuario;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
+import java.nio.charset.StandardCharsets;
 
 @Service
 public class JwtService {
 
-    private static final String SECRET = "perussi-secret-key-super-safe";
+    private final Algorithm algorithm;
+
+    public JwtService(@Value("${security.jwt.secret}") String secret) {
+        if (secret == null || secret.isBlank()
+                || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalArgumentException("JWT_SECRET deve conter pelo menos 32 bytes e ser aleatório");
+        }
+        this.algorithm = Algorithm.HMAC256(secret);
+    }
 
     public String generateToken(Usuario usuario) {
-        Algorithm algorithm = Algorithm.HMAC256(SECRET);
 
         return JWT.create()
                 .withIssuer("perussi-api")
                 .withSubject(usuario.getEmail())
+                .withClaim("uid", usuario.getId() == null ? null : usuario.getId().toString())
+                .withClaim("session", usuario.getVersaoSessao() == null ? "0" : usuario.getVersaoSessao())
                 .withClaim("role", usuario.getRole())
                 .withExpiresAt(generateExpirationDate())
                 .sign(algorithm);
     }
 
     public String validateToken(String token) {
-        Algorithm algorithm = Algorithm.HMAC256(SECRET);
 
         return JWT.require(algorithm)
                 .withIssuer("perussi-api")
@@ -36,8 +45,6 @@ public class JwtService {
     }
 
     private Instant generateExpirationDate() {
-        return LocalDateTime.now()
-                .plusHours(2)
-                .toInstant(ZoneOffset.of("-03:00"));
+        return Instant.now().plus(2, ChronoUnit.HOURS);
     }
 }

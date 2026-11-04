@@ -1,9 +1,11 @@
 package com.perussi.dto;
 
 import java.util.UUID;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 public record CriarPagamentoDTO(
-        UUID pedidoId,
-        String metodoPagamento
+        @NotNull UUID pedidoId,
+        @NotBlank String metodoPagamento
 ) {
 }

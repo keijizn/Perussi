@@ -28,11 +28,22 @@ public class Pedido {
     @Column(nullable = false)
     private BigDecimal total;
 
+    // Null on historical orders: never add freight retroactively.
+    private BigDecimal frete;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private StatusPedido status;
 
     private LocalDateTime criadoEm;
+
+    private LocalDateTime reservaExpiraEm;
+
+    // Nullable for existing orders. A committed intent survives remote-call timeouts.
+    private Boolean pagamentoSolicitado;
+
+    // Persist provider choice before the first remote call, including uncertain outcomes.
+    private String pagamentoApi;
 
     @Column(nullable = false)
     private String cep;

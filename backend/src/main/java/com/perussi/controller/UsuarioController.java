@@ -78,7 +78,7 @@ public class UsuarioController {
     @PutMapping("/me/endereco")
     public EnderecoUsuarioDTO atualizarEndereco(
             Authentication authentication,
-            @RequestBody EnderecoUsuarioDTO dto
+            @jakarta.validation.Valid @RequestBody EnderecoUsuarioDTO dto
     ) {
         Usuario usuario = buscarUsuario(authentication.getName());
 
@@ -112,13 +112,20 @@ public class UsuarioController {
     }
 
     @PutMapping("/me")
+    @org.springframework.transaction.annotation.Transactional
     public UsuarioResponseDTO atualizarPerfil(
             Authentication authentication,
-            @RequestBody AtualizarUsuarioDTO dto
+            @jakarta.validation.Valid @RequestBody AtualizarUsuarioDTO dto
     ) {
-        Usuario usuario = buscarUsuario(authentication.getName());
+        Usuario usuario = usuarioRepository.findLockedByEmail(authentication.getName())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
+        boolean mudouEmail = dto.email() != null && !dto.email().equals(usuario.getEmail());
+        boolean mudouSenha = dto.senha() != null;
+        if ((mudouEmail || mudouSenha) && (dto.senhaAtual() == null
+                || !passwordEncoder.matches(dto.senhaAtual(), usuario.getSenha())))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Informe a senha atual correta para alterar email ou senha.");
 
-        if (dto.email() != null && !dto.email().equals(usuario.getEmail())) {
+        if (mudouEmail) {
             boolean emailJaExiste = usuarioRepository.findByEmail(dto.email()).isPresent();
 
             if (emailJaExiste) {
@@ -138,6 +145,8 @@ public class UsuarioController {
         if (dto.senha() != null && !dto.senha().isBlank()) {
             usuario.setSenha(passwordEncoder.encode(dto.senha()));
         }
+
+        if (mudouEmail || mudouSenha) usuario.setVersaoSessao(java.util.UUID.randomUUID().toString());
 
         Usuario salvo = usuarioRepository.save(usuario);
 

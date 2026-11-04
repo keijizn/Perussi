@@ -150,7 +150,8 @@ public class CarrinhoService {
                                 : item.getProduto().getDesconto();
 
                 BigDecimal precoComDesconto = item.getProduto().getPreco()
-                                .multiply(BigDecimal.valueOf(1 - desconto / 100.0));
+                                .multiply(BigDecimal.valueOf(100 - desconto))
+                                .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
                 return new CarrinhoItemDTO(
                                 item.getId(),
                                 item.getProduto().getId(),

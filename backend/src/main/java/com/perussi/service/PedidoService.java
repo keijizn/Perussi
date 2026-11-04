@@ -1,6 +1,6 @@
 package com.perussi.service;
 
-import com.perussi.dto.ConfirmarPagamentoDTO;
+
 import com.perussi.dto.AtualizarStatusPedidoDTO;
 import com.perussi.dto.EnderecoPedidoDTO;
 import com.perussi.dto.PedidoDTO;
@@ -33,23 +33,35 @@ public class PedidoService {
     private final CarrinhoItemRepository carrinhoItemRepository;
     private final UsuarioRepository usuarioRepository;
     private final ProdutoVariacaoRepository produtoVariacaoRepository;
+    private final PagamentoService pagamentoService;
+    private final EntregaService entregaService;
+
+    @org.springframework.beans.factory.annotation.Value("${pedidos.reserva.minutos:30}")
+    private long reservaMinutos = 30;
 
     public PedidoService(
             PedidoRepository pedidoRepository,
             CarrinhoItemRepository carrinhoItemRepository,
             UsuarioRepository usuarioRepository,
-            ProdutoVariacaoRepository produtoVariacaoRepository) {
+            ProdutoVariacaoRepository produtoVariacaoRepository,
+            PagamentoService pagamentoService, EntregaService entregaService) {
         this.pedidoRepository = pedidoRepository;
         this.carrinhoItemRepository = carrinhoItemRepository;
         this.usuarioRepository = usuarioRepository;
         this.produtoVariacaoRepository = produtoVariacaoRepository;
+        this.pagamentoService = pagamentoService;
+        this.entregaService = entregaService;
     }
 
     @Transactional
     public PedidoDTO finalizarPedido(String emailUsuario, EnderecoPedidoDTO endereco) {
         validarEndereco(endereco);
+        var entrega = entregaService.consultar(endereco.cep());
+        if (!"Curitiba".equalsIgnoreCase(endereco.cidade().trim()) || !"PR".equalsIgnoreCase(endereco.estado().trim()))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A cidade e o estado devem corresponder ao CEP de Curitiba (PR).");
 
-        Usuario usuario = buscarUsuarioPorEmail(emailUsuario);
+        Usuario usuario = usuarioRepository.findLockedByEmail(emailUsuario)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
 
         List<CarrinhoItem> carrinho = carrinhoItemRepository.findByUsuarioId(usuario.getId());
 
@@ -63,27 +75,27 @@ public class PedidoService {
                 .usuario(usuario)
                 .status(StatusPedido.PENDENTE)
                 .criadoEm(LocalDateTime.now())
-                .cep(endereco.cep())
+                .reservaExpiraEm(LocalDateTime.now().plusMinutes(Math.max(1, reservaMinutos)))
+                .cep(entrega.cep())
                 .logradouro(endereco.logradouro())
                 .numero(endereco.numero())
                 .bairro(endereco.bairro())
-                .cidade(endereco.cidade())
-                .estado(endereco.estado())
+                .cidade(entrega.cidade())
+                .estado(entrega.estado())
                 .complemento(endereco.complemento())
                 .itens(new ArrayList<>())
                 .build();
 
+        carrinho.sort(java.util.Comparator.comparing(item -> item.getVariacao().getId()));
         for (CarrinhoItem item : carrinho) {
             ProdutoVariacao variacao = item.getVariacao();
 
-            if (item.getQuantidade() > variacao.getEstoque()) {
+            if (item.getQuantidade() <= 0 || produtoVariacaoRepository.reservar(variacao.getId(), item.getQuantidade()) != 1) {
                 throw new ResponseStatusException(
                         HttpStatus.BAD_REQUEST,
                         "Estoque insuficiente para " + item.getProduto().getNome());
             }
 
-            variacao.setEstoque(variacao.getEstoque() - item.getQuantidade());
-            produtoVariacaoRepository.save(variacao);
 
             Integer desconto = item.getProduto().getDesconto() == null
                     ? 0
@@ -92,7 +104,7 @@ public class PedidoService {
             BigDecimal precoComDesconto = item.getProduto()
                     .getPreco()
                     .multiply(BigDecimal.valueOf(100 - desconto))
-                    .divide(BigDecimal.valueOf(100));
+                    .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
 
             BigDecimal subtotal = precoComDesconto
                     .multiply(BigDecimal.valueOf(item.getQuantidade()));
@@ -110,7 +122,8 @@ public class PedidoService {
             pedido.getItens().add(pedidoItem);
         }
 
-        pedido.setTotal(total);
+        pedido.setFrete(entrega.frete());
+        pedido.setTotal(total.add(entrega.frete()));
 
         Pedido salvo = pedidoRepository.save(pedido);
 
@@ -118,6 +131,8 @@ public class PedidoService {
 
         return converterParaDTO(salvo);
     }
+
+    public EntregaService.Entrega consultarEntrega(String cep) { return entregaService.consultar(cep); }
 
     public List<PedidoDTO> listarMeusPedidos(String emailUsuario) {
         Usuario usuario = buscarUsuarioPorEmail(emailUsuario);
@@ -135,13 +150,21 @@ public class PedidoService {
                 .toList();
     }
 
+    @Transactional
     public PedidoDTO atualizarStatus(UUID pedidoId, AtualizarStatusPedidoDTO dto) {
-        Pedido pedido = pedidoRepository.findById(pedidoId)
+        Pedido pedido = pedidoRepository.findLockedById(pedidoId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Pedido não encontrado"));
 
         StatusPedido novoStatus = converterStatus(dto.status());
+        if (novoStatus == pedido.getStatus()) return converterParaDTO(pedido);
+        if (novoStatus == StatusPedido.CANCELADO) {
+            return converterParaDTO(pagamentoService.cancelar(pedidoId));
+        }
+        boolean permitido = (pedido.getStatus() == StatusPedido.PAGO && novoStatus == StatusPedido.ENVIADO)
+                || (pedido.getStatus() == StatusPedido.ENVIADO && novoStatus == StatusPedido.ENTREGUE);
+        if (!permitido) throw new ResponseStatusException(HttpStatus.CONFLICT, "Transição de pedido não permitida");
         pedido.setStatus(novoStatus);
 
         Pedido salvo = pedidoRepository.save(pedido);
@@ -164,46 +187,6 @@ public class PedidoService {
         }
 
         return converterParaDTO(pedido);
-    }
-
-    public PedidoDTO confirmarPagamento(
-            String emailUsuario,
-            UUID pedidoId,
-            ConfirmarPagamentoDTO dto) {
-        Usuario usuario = buscarUsuarioPorEmail(emailUsuario);
-
-        Pedido pedido = pedidoRepository.findById(pedidoId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Pedido não encontrado"));
-
-        if (!pedido.getUsuario().getId().equals(usuario.getId())) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Você não possui acesso a este pedido");
-        }
-
-        if (pedido.getStatus() != StatusPedido.PENDENTE) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Apenas pedidos pendentes podem ser pagos");
-        }
-
-        String metodo = dto.metodoPagamento().toUpperCase();
-
-        if (!metodo.equals("PIX") && !metodo.equals("CARTAO")) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Método de pagamento inválido");
-        }
-
-        pedido.setMetodoPagamento(metodo);
-
-        pedido.setStatus(StatusPedido.PAGO);
-
-        Pedido salvo = pedidoRepository.save(pedido);
-
-        return converterParaDTO(salvo);
     }
 
     private Usuario buscarUsuarioPorEmail(String emailUsuario) {
@@ -259,6 +242,8 @@ public class PedidoService {
         return new PedidoDTO(
                 pedido.getId(),
                 pedido.getTotal(),
+                pedido.getTotal().subtract(pedido.getFrete() == null ? BigDecimal.ZERO : pedido.getFrete()),
+                pedido.getFrete(),
                 pedido.getStatus().name(),
                 pedido.getMetodoPagamento(),
                 pedido.getCriadoEm(),

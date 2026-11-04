@@ -1,0 +1,13 @@
+**/node_modules/
+**/.npm-cache/
+**/dist/
+**/target/
+.tools/
+.env
+.env.*
+!.env.example
+*.local.properties
+/Perussi-main/
+/output/
+/tmp/
+/backend/uploads/
