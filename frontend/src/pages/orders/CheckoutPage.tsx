@@ -1,3 +1,5 @@
+import ConfirmacaoEmail from '../../components/ConfirmacaoEmail'
+import { useNotification } from '../../contexts/NotificationContext'
 import { FormEvent, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -24,6 +26,8 @@ type EnderecoUsuario = {
 }
 
 export default function CheckoutPage() {
+  const notificar = useNotification()
+  const [emailConfirmado, setEmailConfirmado] = useState(false)
   const navigate = useNavigate()
   const { itens, totalCarrinho, carregarCarrinho } = useCart()
 
@@ -93,6 +97,11 @@ export default function CheckoutPage() {
     event.preventDefault()
     setErro('')
 
+    if (!emailConfirmado) {
+      setErro('Confirme seu e-mail antes de finalizar a compra.')
+      return
+    }
+
     if (!entrega || entrega.cep !== cep.replace('-', '').trim()) {
       setErro('Informe um CEP válido de Curitiba e aguarde a validação da entrega.')
       return
@@ -123,6 +132,7 @@ export default function CheckoutPage() {
 
       await carregarCarrinho()
 
+      notificar('Pedido criado! Conclua o pagamento para confirmar a compra.')
       navigate(`/pagamento/${response.data.id}`)
     } catch (error: any) {
       setErro(error.response?.data?.erro || 'Não foi possível finalizar o pedido.')
@@ -145,6 +155,7 @@ export default function CheckoutPage() {
         </p>
       </div>
 
+      <ConfirmacaoEmail onChange={setEmailConfirmado} />
       <form onSubmit={finalizarPedido} className="grid gap-8 lg:grid-cols-2">
         <div className="rounded-[2rem] border border-black/10 bg-white/70 p-6 shadow-xl shadow-black/5 dark:border-white/10 dark:bg-white/5">
           <h2 className="font-display mb-6 text-3xl font-semibold">
@@ -273,7 +284,7 @@ export default function CheckoutPage() {
 
           <button
             type="submit"
-            disabled={finalizando || buscandoCep || !entrega || itens.length === 0}
+            disabled={!emailConfirmado || finalizando || buscandoCep || !entrega || itens.length === 0}
             className="mt-8 flex w-full justify-center rounded-full bg-zinc-950 px-6 py-3 text-sm font-medium text-white transition hover:bg-[#b98b7d] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950"
           >
             {finalizando ? 'Finalizando...' : 'Finalizar pedido'}

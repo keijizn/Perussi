@@ -18,7 +18,8 @@ class PerfilTest {
     final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(4);
     final Usuario user = Usuario.builder().id(UUID.randomUUID()).email("perfil@example.com").nome("Teste")
             .senha(encoder.encode("original123")).role("CUSTOMER").build();
-    final UsuarioController controller = new UsuarioController(repository, mock(EnderecoUsuarioRepository.class), encoder);
+    final org.springframework.context.ApplicationEventPublisher eventos = mock(org.springframework.context.ApplicationEventPublisher.class);
+    final UsuarioController controller = new UsuarioController(repository, mock(EnderecoUsuarioRepository.class), encoder, eventos);
     final JwtService jwt = new JwtService("test-secret-with-at-least-thirty-two-bytes");
     final SecurityUserDetailsService sessions = new SecurityUserDetailsService(repository);
 
@@ -31,9 +32,12 @@ class PerfilTest {
         return controller.atualizarPerfil(new UsernamePasswordAuthenticationToken("perfil@example.com", null), dto);
     }
     @Test void nameChangePreservesSessionAndReturnsUpdatedProfile() {
+        user.setEmailConfirmado(true);
         String token = jwt.generateToken(user);
         assertEquals("Novo nome", update(new AtualizarUsuarioDTO("Novo nome", null, null, null)).nome());
         assertNotNull(sessions.loadSession(jwt.validateToken(token), token));
+        assertTrue(user.getEmailConfirmado());
+        verifyNoInteractions(eventos);
     }
     @Test void emailOrPasswordChangeRequiresCurrentPassword() {
         for (var dto : List.of(new AtualizarUsuarioDTO(null, "novo@example.com", null, null),
@@ -63,11 +67,18 @@ class PerfilTest {
         assertThrows(UsernameNotFoundException.class, () -> sessions.loadSession(jwt.validateToken(old), old));
     }
     @Test void emailChangeRevokesSessionAndPreservesUserId() {
+        user.setEmailConfirmado(true);
+        user.setConfirmacaoHash("old-hash");
+        user.setRecuperacaoHash("old-recovery");
         UUID id = user.getId();
         String old = jwt.generateToken(user);
         update(new AtualizarUsuarioDTO(null, "novo@example.com", null, "original123"));
         assertEquals(id, user.getId());
         assertEquals("novo@example.com", user.getEmail());
+        assertFalse(user.getEmailConfirmado());
+        assertNull(user.getConfirmacaoHash());
+        assertNull(user.getRecuperacaoHash());
+        verify(eventos).publishEvent(new com.perussi.service.confirmacao.ConfirmacaoEmailSolicitada(id));
         assertThrows(UsernameNotFoundException.class, () -> sessions.loadSession("perfil@example.com", old));
     }
     @Test void validatesEmptyProfileWeakPasswordAndInvalidAddress() {

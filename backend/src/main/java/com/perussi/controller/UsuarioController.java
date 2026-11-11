@@ -21,15 +21,18 @@ public class UsuarioController {
     private final UsuarioRepository usuarioRepository;
     private final EnderecoUsuarioRepository enderecoUsuarioRepository;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final org.springframework.context.ApplicationEventPublisher eventos;
 
     public UsuarioController(
             UsuarioRepository usuarioRepository,
             EnderecoUsuarioRepository enderecoUsuarioRepository,
-            BCryptPasswordEncoder passwordEncoder
+            BCryptPasswordEncoder passwordEncoder,
+            org.springframework.context.ApplicationEventPublisher eventos
     ) {
         this.usuarioRepository = usuarioRepository;
         this.enderecoUsuarioRepository = enderecoUsuarioRepository;
         this.passwordEncoder = passwordEncoder;
+        this.eventos = eventos;
     }
 
     @GetMapping("/me")
@@ -136,6 +139,13 @@ public class UsuarioController {
             }
 
             usuario.setEmail(dto.email());
+            usuario.setEmailConfirmado(false);
+            usuario.setConfirmacaoHash(null);
+            usuario.setConfirmacaoDestino(null);
+            usuario.setConfirmacaoExpiraEm(null);
+            usuario.setRecuperacaoHash(null);
+            usuario.setRecuperacaoExpiraEm(null);
+            eventos.publishEvent(new com.perussi.service.confirmacao.ConfirmacaoEmailSolicitada(usuario.getId()));
         }
 
         if (dto.nome() != null && !dto.nome().isBlank()) {

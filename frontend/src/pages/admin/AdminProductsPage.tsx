@@ -1,3 +1,4 @@
+import { useNotification } from '../../contexts/NotificationContext'
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react'
 import { api } from '../../services/api'
 
@@ -19,6 +20,7 @@ type Produto = {
 }
 
 export default function AdminProductsPage() {
+  const notificar = useNotification()
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [produtoSelecionado, setProdutoSelecionado] = useState('')
 
@@ -72,7 +74,8 @@ export default function AdminProductsPage() {
       )
 
       setImagemUrl(response.data.url)
-      setMensagem('Imagem enviada com sucesso.')
+      setMensagem('')
+      notificar('Imagem enviada com sucesso.')
     } catch {
       setMensagem('Erro ao enviar imagem.')
     } finally {
@@ -103,10 +106,12 @@ export default function AdminProductsPage() {
     try {
       if (editandoId) {
         await api.put(`/produtos/${editandoId}`, body)
-        setMensagem('Produto atualizado com sucesso.')
+        setMensagem('')
+        notificar('Produto atualizado com sucesso.')
       } else {
         await api.post('/produtos', body)
-        setMensagem('Produto cadastrado com sucesso.')
+        setMensagem('')
+        notificar('Produto cadastrado com sucesso.')
       }
 
       setEditandoId('')
@@ -145,7 +150,8 @@ export default function AdminProductsPage() {
     try {
       await api.delete(`/produtos/${id}`)
       await carregarProdutos()
-      setMensagem('Produto excluído com sucesso.')
+      setMensagem('')
+      notificar('Produto excluído com sucesso.')
     } catch {
       setMensagem('Erro ao excluir produto.')
     }
@@ -173,7 +179,8 @@ export default function AdminProductsPage() {
       setEstoque('')
 
       await carregarProdutos()
-      setMensagem('Variação cadastrada com sucesso.')
+      setMensagem('')
+      notificar('Variação cadastrada com sucesso.')
     } catch {
       setMensagem('Erro ao cadastrar variação.')
     }
@@ -197,7 +204,8 @@ export default function AdminProductsPage() {
       setNovoEstoque('')
 
       await carregarProdutos()
-      setMensagem('Estoque atualizado com sucesso.')
+      setMensagem('')
+      notificar('Estoque atualizado com sucesso.')
     } catch {
       setMensagem('Erro ao atualizar estoque.')
     }
@@ -211,7 +219,8 @@ export default function AdminProductsPage() {
     try {
       await api.delete(`/variacoes/${id}`)
       await carregarProdutos()
-      setMensagem('Variação excluída com sucesso.')
+      setMensagem('')
+      notificar('Variação excluída com sucesso.')
     } catch {
       setMensagem('Erro ao excluir variação.')
     }

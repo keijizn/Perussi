@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { api } from '../services/api'
 import { useAuth } from './AuthContext'
+import { useNotification } from './NotificationContext'
 
 type CartItem = {
   id: string
@@ -33,6 +34,7 @@ type CartContextType = {
 const CartContext = createContext<CartContextType | null>(null)
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  const notificar = useNotification()
   const { isAuthenticated } = useAuth()
   const [itens, setItens] = useState<CartItem[]>([])
   const [carregando, setCarregando] = useState(false)
@@ -54,16 +56,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function removerItem(itemId: string) {
-    await api.delete(`/carrinho/${itemId}`)
-    await carregarCarrinho()
+    try {
+      await api.delete(`/carrinho/${itemId}`)
+      setItens((atuais) => atuais.filter((item) => item.id !== itemId))
+      notificar('Produto removido do carrinho.')
+    } catch {
+      notificar('Não foi possível remover o produto. Tente novamente.', 'erro')
+    }
   }
 
   async function atualizarQuantidade(itemId: string, quantidade: number) {
-    await api.put(`/carrinho/${itemId}`, {
-      quantidade,
-    })
-
-    await carregarCarrinho()
+    try {
+      await api.put(`/carrinho/${itemId}`, { quantidade })
+      await carregarCarrinho()
+      notificar('Quantidade atualizada.')
+    } catch {
+      notificar('Não foi possível atualizar a quantidade. Confira o estoque e tente novamente.', 'erro')
+    }
   }
 
   useEffect(() => {

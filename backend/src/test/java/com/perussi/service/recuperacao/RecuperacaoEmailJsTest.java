@@ -25,6 +25,8 @@ class RecuperacaoEmailJsTest {
             assertEquals("privada", json.path("accessToken").asText());
             assertEquals("cliente@example.com", json.at("/template_params/email").asText());
             assertEquals("http://localhost:5173/redefinir-senha#token=teste", json.at("/template_params/link").asText());
+            assertTrue(json.at("/template_params/confirmacao").isBoolean());
+            assertEquals(false, json.at("/template_params/confirmacao").asBoolean());
             recebido.set(true);
             return new MockClientHttpResponse(new byte[0], HttpStatus.OK);
         });

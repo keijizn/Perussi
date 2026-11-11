@@ -1,26 +1,45 @@
+import { useNotification } from '../contexts/NotificationContext'
 import { Link, Outlet } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
 import { useTheme } from '../contexts/ThemeContext'
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 export default function MainLayout() {
+  const notificar = useNotification()
   const { theme, toggleTheme } = useTheme()
   const { quantidadeTotal } = useCart()
   const navigate = useNavigate()
   const { user, isAuthenticated, isAdmin, logout } = useAuth()
 
   const [menuAberto, setMenuAberto] = useState(false)
+  const headerRef = useRef<HTMLElement>(null)
+
+  useLayoutEffect(() => {
+    const header = headerRef.current
+    if (!header) return
+    const atualizarAltura = () => {
+      document.documentElement.style.setProperty('--navbar-height', `${header.getBoundingClientRect().height}px`)
+    }
+    atualizarAltura()
+    const observer = new ResizeObserver(atualizarAltura)
+    observer.observe(header)
+    return () => {
+      observer.disconnect()
+      document.documentElement.style.removeProperty('--navbar-height')
+    }
+  }, [])
 
   function handleLogout() {
     logout()
+    notificar('Você saiu da sua conta.')
     navigate('/')
   }
 
   return (
     <div className="min-h-screen bg-[#f8f3ef] text-zinc-950 transition-colors dark:bg-zinc-950 dark:text-zinc-50">
-      <header className="sticky top-0 z-50 border-b border-black/10 bg-[#f8f3ef]/80 backdrop-blur-xl transition-colors dark:border-white/10 dark:bg-zinc-950/80">
+      <header ref={headerRef} className="sticky top-0 z-50 border-b border-black/10 bg-[#f8f3ef]/80 backdrop-blur-xl transition-colors dark:border-white/10 dark:bg-zinc-950/80">
         <nav className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 md:py-5">
           <Link
             to="/"

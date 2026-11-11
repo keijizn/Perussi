@@ -1,3 +1,4 @@
+import { useNotification } from '../../contexts/NotificationContext'
 import { FormEvent, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
@@ -5,6 +6,7 @@ import { api } from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
 
 export default function RecuperacaoSenhaPage({ redefinir = false }: { redefinir?: boolean }) {
+  const notificar = useNotification()
   const navigate = useNavigate()
   const { logout } = useAuth()
   const [token] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get('token') ?? '')
@@ -29,10 +31,12 @@ export default function RecuperacaoSenhaPage({ redefinir = false }: { redefinir?
       if (redefinir) {
         await api.post('/auth/redefinir-senha', { token, senha })
         logout()
+        notificar('Senha alterada com sucesso. Entre com sua nova senha.')
         navigate('/login', { replace: true, state: { senhaRedefinida: true } })
       } else {
         const result = await api.post('/auth/esqueci-senha', { email: email.trim() })
         setMensagem(result.data.message)
+        notificar('Solicitação recebida. Se o e-mail estiver cadastrado, você receberá o link.')
       }
     } catch (error) {
       const status = axios.isAxiosError(error) ? error.response?.status : undefined

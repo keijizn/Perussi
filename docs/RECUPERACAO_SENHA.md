@@ -14,7 +14,7 @@ Implementação de 29/10/2026. O envio está **desativado por padrão**. A inter
 
 ## Email da loja
 
-A loja escolheu o EmailJS com o serviço Outlook para enviar o modelo Password Reset. O backend usa a API de envio com os parâmetros `email` e `link`. No perfil local de testes, os IDs e as chaves ficam em `backend/emailjs.local.properties`, ignorado pelo Git. Preencha a chave privada apenas nesse arquivo. Reinicie o backend atualizado após salvar. A entrega real ainda precisa ser confirmada. Para produção, configure o provedor, as chaves e a URL HTTPS da loja no ambiente do backend.
+A loja escolheu o EmailJS com o serviço Outlook para enviar o modelo Password Reset. O backend usa a API de envio com `email`, `link` e `confirmacao: false`. O template compartilhado e a atualização compatível com o backend publicado estão descritos em [CONFIRMACAO_EMAIL.md](CONFIRMACAO_EMAIL.md). No perfil local de testes, os IDs e as chaves ficam em `backend/emailjs.local.properties`, ignorado pelo Git. Preencha a chave privada apenas nesse arquivo. Reinicie o backend atualizado após salvar. A recuperação foi validada no site publicado pelo usuário. Após atualizar o template compartilhado, repetir o teste real dos dois tipos de mensagem. Para produção, configure o provedor, as chaves e a URL HTTPS da loja no ambiente do backend.
 
 Referência: https://support.microsoft.com/en-us/outlook/pop-imap-and-smtp-settings-for-outlook-com
 

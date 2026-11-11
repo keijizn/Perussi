@@ -1,3 +1,5 @@
+import ConfirmacaoEmail from '../../components/ConfirmacaoEmail'
+import { useNotification } from '../../contexts/NotificationContext'
 import { FormEvent, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
@@ -54,6 +56,7 @@ type ViaCepResponse = {
 }
 
 export default function ProfilePage() {
+  const notificar = useNotification()
   const navigate = useNavigate()
   const { logout, atualizarUsuario } = useAuth()
   const { quantidadeTotal } = useCart()
@@ -165,6 +168,7 @@ export default function ProfilePage() {
 
       if (alterarAcesso) {
         logout()
+        notificar('Dados atualizados. Entre novamente com seu e-mail e senha atuais.')
         navigate('/login', { replace: true, state: { perfilAtualizado: true } })
         return
       }
@@ -173,7 +177,7 @@ export default function ProfilePage() {
       setSenha('')
       setSenhaAtual('')
       setEditando(false)
-      setMensagem('Perfil atualizado com sucesso.')
+      notificar('Perfil atualizado com sucesso.')
     } catch (error: any) {
       setMensagem(error.response?.data?.mensagens?.join(' ') || error.response?.data?.erro || 'Erro ao atualizar perfil.')
     } finally {
@@ -197,7 +201,7 @@ export default function ProfilePage() {
       })
 
       setEditandoEndereco(false)
-      setMensagem('Endereço padrão atualizado com sucesso.')
+      notificar('Endereço padrão atualizado com sucesso.')
     } catch (error: any) {
       setMensagem(error.response?.data?.mensagens?.join(' ') || error.response?.data?.erro || 'Erro ao atualizar endereço.')
     }
@@ -213,6 +217,7 @@ export default function ProfilePage() {
     try {
       await api.delete('/usuarios/me')
       logout()
+      notificar('Sua conta foi excluída.')
       navigate('/')
     } catch {
       setMensagem('Erro ao excluir perfil.')
@@ -244,6 +249,7 @@ export default function ProfilePage() {
         </p>
       </div>
 
+      <ConfirmacaoEmail />
       {mensagem && (
         <div className="mb-8 rounded-2xl bg-[#f2ddd5] px-5 py-3 text-sm text-zinc-900 dark:bg-[#b98b7d]/20 dark:text-zinc-100">
           {mensagem}

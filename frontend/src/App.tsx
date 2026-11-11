@@ -1,3 +1,4 @@
+import ConfirmarEmailPage from './pages/account/ConfirmarEmailPage'
 import { Route, Routes } from 'react-router-dom'
 
 import MainLayout from './layouts/MainLayout'
@@ -26,6 +27,7 @@ export default function App() {
     <Routes>
       <Route element={<MainLayout />}>
         <Route path="/" element={<HomePage />} />
+        <Route path="/confirmar-email" element={<ConfirmarEmailPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/esqueci-senha" element={<RecuperacaoSenhaPage key="solicitar" />} />
         <Route path="/redefinir-senha" element={<RecuperacaoSenhaPage key="redefinir" redefinir />} />

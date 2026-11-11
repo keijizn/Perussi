@@ -1,8 +1,10 @@
+import { useNotification } from '../../contexts/NotificationContext'
 import { FormEvent, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 
 export default function LoginPage() {
+  const notificar = useNotification()
   const navigate = useNavigate()
   const location = useLocation()
   const { login, sessaoExpirada } = useAuth()
@@ -19,6 +21,7 @@ export default function LoginPage() {
 
     try {
       await login({ email, senha })
+      notificar('Você entrou na sua conta. Bem-vindo à Perussi!')
       navigate('/')
     } catch {
       setErro('Email ou senha inválidos.')
@@ -46,6 +49,7 @@ export default function LoginPage() {
 
       <div className="rounded-[2rem] border border-black/10 bg-white/70 p-8 shadow-2xl shadow-black/10 backdrop-blur-md dark:border-white/10 dark:bg-white/5">
         <h2 className="font-display text-3xl font-semibold">Login</h2>
+        {location.state?.contaCriada && <p role="status" className="mt-4 text-sm">Conta criada! Verifique o e-mail de confirmação e a pasta de spam. Você pode entrar agora e reenviar o link pelo perfil, se necessário.</p>}
         {location.state?.senhaRedefinida && <p role="status" className="mt-4 text-sm">Senha alterada. Entre com sua nova senha.</p>}
         {location.state?.perfilAtualizado && <p role="status" className="mt-4 text-sm">Dados atualizados. Entre novamente com seu email e senha atuais.</p>}
 

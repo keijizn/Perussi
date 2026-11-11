@@ -1,3 +1,4 @@
+import { useNotification } from '../../contexts/NotificationContext'
 import { useEffect, useState } from 'react'
 import { api } from '../../services/api'
 
@@ -43,6 +44,7 @@ function formatarMetodoPagamento(metodo?: string) {
 }
 
 export default function AdminOrdersPage() {
+  const notificar = useNotification()
   const [pedidos, setPedidos] = useState<Pedido[]>([])
   const [carregando, setCarregando] = useState(true)
   const [mensagem, setMensagem] = useState('')
@@ -70,7 +72,7 @@ export default function AdminOrdersPage() {
 
       await carregarPedidos()
 
-      setMensagem('Pedido atualizado. Confira o status: pagamentos já aprovados são preservados.')
+      notificar('Pedido atualizado. Confira o status: pagamentos já aprovados são preservados.')
     } catch (error: any) {
       setMensagem(error.response?.data?.erro || 'Erro ao atualizar status do pedido.')
     }

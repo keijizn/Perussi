@@ -21,19 +21,27 @@ public class AuthController {
     private final UsuarioRepository usuarioRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final org.springframework.context.ApplicationEventPublisher eventos;
+    private final com.perussi.service.confirmacao.LimiteConfirmacao limite;
 
     public AuthController(
             UsuarioRepository usuarioRepository,
             BCryptPasswordEncoder passwordEncoder,
-            JwtService jwtService
+            JwtService jwtService,
+            org.springframework.context.ApplicationEventPublisher eventos,
+            com.perussi.service.confirmacao.LimiteConfirmacao limite
     ) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.eventos = eventos;
+        this.limite = limite;
     }
 
     @PostMapping("/register")
-    public UsuarioResponseDTO register(@Valid @RequestBody UsuarioRegisterDTO dto) {
+    @org.springframework.transaction.annotation.Transactional
+    public UsuarioResponseDTO register(@Valid @RequestBody UsuarioRegisterDTO dto, jakarta.servlet.http.HttpServletRequest request) {
+        limite.verificar("cadastro:" + request.getRemoteAddr(), 10);
         if (usuarioRepository.findByEmail(dto.email()).isPresent()) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -49,6 +57,7 @@ public class AuthController {
                 .build();
 
         Usuario usuarioSalvo = usuarioRepository.save(usuario);
+        eventos.publishEvent(new com.perussi.service.confirmacao.ConfirmacaoEmailSolicitada(usuarioSalvo.getId()));
 
         return new UsuarioResponseDTO(
                 usuarioSalvo.getId(),

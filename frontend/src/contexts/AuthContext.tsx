@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null)
       setSessaoExpirada(true)
       // A recovery link must remain usable even when an old login has expired.
-      if (!['/esqueci-senha', '/redefinir-senha'].includes(window.location.pathname)) {
+      if (!['/esqueci-senha', '/redefinir-senha', '/confirmar-email'].includes(window.location.pathname)) {
         navigate('/login', { replace: true })
       }
     }

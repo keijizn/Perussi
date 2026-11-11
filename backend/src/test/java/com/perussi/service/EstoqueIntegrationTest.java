@@ -50,7 +50,7 @@ class EstoqueIntegrationTest {
             em.persist(variacao);
             String[] emails = {UUID.randomUUID() + "@example.com", UUID.randomUUID() + "@example.com"};
             for (String email : emails) {
-                Usuario usuario = Usuario.builder().email(email).nome("Cliente").role("CUSTOMER").senha("hash").build();
+                Usuario usuario = Usuario.builder().email(email).emailConfirmado(true).nome("Cliente").role("CUSTOMER").senha("hash").build();
                 em.persist(usuario);
                 em.persist(CarrinhoItem.builder().usuario(usuario).produto(produto).variacao(variacao).quantidade(1).build());
             }
@@ -72,6 +72,22 @@ class EstoqueIntegrationTest {
             start.countDown();
             return (a.get(15, TimeUnit.SECONDS) ? 1 : 0) + (b.get(15, TimeUnit.SECONDS) ? 1 : 0);
         } finally { pool.shutdownNow(); }
+    }
+
+    @Test void unconfirmedAccountCannotCheckoutAndKeepsCartAndStock() {
+        Fixture f = fixture(2);
+        tx.executeWithoutResult(ignored -> {
+            var u = em.createQuery("select u from Usuario u where u.email = :email", Usuario.class).setParameter("email", f.email1()).getSingleResult();
+            u.setEmailConfirmado(null);
+        });
+        var erro = assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> checkout.finalizarPedido(f.email1(), endereco));
+        assertEquals(403, erro.getStatusCode().value());
+        assertEquals(2, variacoes.findById(f.variacao()).orElseThrow().getEstoque());
+        tx.executeWithoutResult(ignored -> {
+            var u = em.createQuery("select u from Usuario u where u.email = :email", Usuario.class).setParameter("email", f.email1()).getSingleResult();
+            assertEquals(1L, em.createQuery("select count(c) from CarrinhoItem c where c.usuario.id = :id", Long.class).setParameter("id", u.getId()).getSingleResult());
+            assertEquals(0L, em.createQuery("select count(p) from Pedido p where p.usuario.id = :id", Long.class).setParameter("id", u.getId()).getSingleResult());
+        });
     }
 
     @Test void onlyOneCustomerCanBuyLastUnit() throws Exception {

@@ -33,5 +33,14 @@ public class Usuario {
     private java.time.Instant recuperacaoSolicitadaEm;
     private String recuperacaoVersaoSessao;
 
+    private Boolean emailConfirmado;
+    @Column(unique = true, length = 64)
+    private String confirmacaoHash;
+    private String confirmacaoDestino;
+    private java.time.Instant confirmacaoExpiraEm;
+    private java.time.Instant confirmacaoSolicitadaEm;
+    private java.time.Instant confirmacaoJanelaEm;
+    private Integer confirmacaoEnvios;
+
     private String role;
 }

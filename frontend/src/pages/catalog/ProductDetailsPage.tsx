@@ -1,3 +1,5 @@
+import { useAuth } from '../../contexts/AuthContext'
+import { useNotification } from '../../contexts/NotificationContext'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
@@ -22,6 +24,8 @@ type Produto = {
 }
 
 export default function ProductDetailsPage() {
+  const notificar = useNotification()
+  const { isAuthenticated } = useAuth()
   const { id } = useParams()
   const { carregarCarrinho } = useCart()
 
@@ -66,9 +70,10 @@ export default function ProductDetailsPage() {
       })
 
       await carregarCarrinho()
-      setMensagem('Produto adicionado ao carrinho.')
+      setMensagem('')
+      notificar('Produto adicionado ao carrinho.')
     } catch {
-      setMensagem('Faça login para adicionar ao carrinho.')
+      notificar(isAuthenticated ? 'Não foi possível atualizar o carrinho. Confira o estoque e tente novamente.' : 'Faça login para adicionar ao carrinho.', 'erro')
     }
   }
 

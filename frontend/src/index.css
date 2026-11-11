@@ -41,3 +41,11 @@ html.dark {
 .font-sans {
   font-family: Inter, system-ui, sans-serif;
 }
+@keyframes perussi-notification-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.perussi-notification { animation: perussi-notification-enter 180ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .perussi-notification { animation: none; }
+}

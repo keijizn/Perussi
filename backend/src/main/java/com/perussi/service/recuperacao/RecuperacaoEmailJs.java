@@ -49,7 +49,8 @@ public class RecuperacaoEmailJs implements RecuperacaoEmail {
 
     public void enviar(String email, String token) {
         if (!habilitado()) throw new IllegalStateException("Envio pelo EmailJS indisponível.");
-        var parametros = Map.of("email", email, "link", site + "/redefinir-senha#token=" + token);
+        var parametros = Map.of("email", email, "link", site + "/redefinir-senha#token=" + token,
+                "confirmacao", false);
         var corpo = Map.of("service_id", servico, "template_id", modelo, "user_id", publica,
                 "accessToken", privada, "template_params", parametros);
         cliente.post().uri("/api/v1.0/email/send").contentType(MediaType.APPLICATION_JSON)

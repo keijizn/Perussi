@@ -63,6 +63,9 @@ public class PedidoService {
         Usuario usuario = usuarioRepository.findLockedByEmail(emailUsuario)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
 
+        if (!Boolean.TRUE.equals(usuario.getEmailConfirmado()))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Confirme seu e-mail antes de finalizar a compra. Você pode reenviar o link pelo perfil.");
+
         List<CarrinhoItem> carrinho = carrinhoItemRepository.findByUsuarioId(usuario.getId());
 
         if (carrinho.isEmpty()) {

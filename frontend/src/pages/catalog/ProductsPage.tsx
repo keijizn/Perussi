@@ -1,3 +1,4 @@
+import { useNotification } from '../../contexts/NotificationContext'
 import { useEffect, useState } from 'react'
 import { api } from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
@@ -33,6 +34,7 @@ type Favorito = {
 }
 
 export default function ProductsPage() {
+  const notificar = useNotification()
   const { isAuthenticated } = useAuth()
   const { carregarCarrinho } = useCart()
 
@@ -81,8 +83,9 @@ export default function ProductsPage() {
         await api.post(`/favoritos/${produtoId}`)
         setFavoritos((atuais) => [...atuais, produtoId])
       }
+      notificar(jaFavoritado ? 'Produto removido dos favoritos.' : 'Produto salvo nos favoritos.')
     } catch {
-      setMensagem('Não foi possível atualizar os favoritos.')
+      notificar('Não foi possível atualizar os favoritos. Tente novamente.', 'erro')
     }
   }
 
@@ -106,13 +109,10 @@ export default function ProductsPage() {
 
       await carregarCarrinho()
 
-      setMensagem(`${produto.nome} adicionado ao carrinho.`)
-
-      setTimeout(() => {
-        setMensagem('')
-      }, 2500)
+      setMensagem('')
+      notificar(`${produto.nome} adicionado ao carrinho.`)
     } catch {
-      setMensagem('Faça login para adicionar produtos ao carrinho.')
+      notificar(isAuthenticated ? 'Não foi possível atualizar o carrinho. Confira o estoque e tente novamente.' : 'Faça login para adicionar produtos ao carrinho.', 'erro')
     }
   }
 

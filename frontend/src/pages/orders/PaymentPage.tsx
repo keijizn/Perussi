@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useNotification } from '../../contexts/NotificationContext'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../services/api'
 
@@ -32,6 +33,7 @@ type PagamentoPix = {
 }
 
 export default function PaymentPage() {
+  const notificar = useNotification()
   const { pedidoId } = useParams()
   const navigate = useNavigate()
 
@@ -47,9 +49,22 @@ export default function PaymentPage() {
   const [pagamentoPix, setPagamentoPix] = useState<PagamentoPix | null>(null)
   const [reservaEncerrada, setReservaEncerrada] = useState(false)
   const consultandoPix = useRef(false)
+  const resultadoNotificado = useRef(false)
+
+  const mostrarResultado = useCallback((status: string) => {
+    if (resultadoNotificado.current) return
+    resultadoNotificado.current = true
+    if (['PAGO', 'ENVIADO', 'ENTREGUE', 'approved'].includes(status)) {
+      notificar('Pagamento aprovado! Sua compra está confirmada.')
+    } else if (['CANCELADO', 'cancelled', 'rejected'].includes(status)) {
+      notificar('Pagamento não concluído. Confira a situação em Meus Pedidos.', 'erro')
+    }
+    navigate('/meus-pedidos')
+  }, [navigate, notificar])
 
   useEffect(() => {
     let cancelado = false
+    resultadoNotificado.current = false
     setVerificando(true)
     setResumo(null)
     setPagamentoPix(null)
@@ -60,7 +75,7 @@ export default function PaymentPage() {
 
         if (cancelado) return
         if (response.data.status !== 'PENDENTE') {
-          navigate('/meus-pedidos')
+          mostrarResultado(response.data.status)
           return
         }
         setResumo(response.data)
@@ -73,7 +88,7 @@ export default function PaymentPage() {
 
     verificarPedido()
     return () => { cancelado = true }
-  }, [pedidoId, navigate])
+  }, [pedidoId, navigate, mostrarResultado])
 
   useEffect(() => {
     if (!verificando && resumo && metodoPagamento === 'PIX' && !pagamentoPix) {
@@ -102,7 +117,7 @@ export default function PaymentPage() {
 
       setPagamentoPix(response.data)
       if (['approved', 'cancelled', 'rejected'].includes(response.data.status)) {
-        navigate('/meus-pedidos')
+        mostrarResultado(response.data.status)
         return
       }
       setMensagem('PIX disponível. Novas consultas recuperam o mesmo pagamento.')
@@ -117,22 +132,32 @@ export default function PaymentPage() {
 
   useEffect(() => {
     if (!pagamentoPix || !pedidoId) return
+    let cancelado = false
+    let consultando = false
     const timer = window.setInterval(async () => {
+      if (consultando || resultadoNotificado.current) return
+      consultando = true
       try {
         const response = await api.get(`/pedidos/${pedidoId}/meu`)
-        if (response.data.status !== 'PENDENTE') navigate('/meus-pedidos')
+        if (!cancelado && response.data.status !== 'PENDENTE') mostrarResultado(response.data.status)
       } catch {
-        setMensagem('Não foi possível atualizar o status. Consulte seus pedidos novamente.')
+        if (!cancelado) setMensagem('Não foi possível atualizar o status. Consulte seus pedidos novamente.')
+      } finally {
+        consultando = false
       }
     }, 5000)
-    return () => window.clearInterval(timer)
-  }, [pagamentoPix, pedidoId, navigate])
+    return () => { cancelado = true; window.clearInterval(timer) }
+  }, [pagamentoPix, pedidoId, mostrarResultado])
 
   async function copiarCodigoPix() {
     if (!pagamentoPix?.qrCode) return
 
-    await navigator.clipboard.writeText(pagamentoPix.qrCode)
-    setMensagem('Código PIX copiado.')
+    try {
+      await navigator.clipboard.writeText(pagamentoPix.qrCode)
+      notificar('Código PIX copiado.')
+    } catch {
+      notificar('Não foi possível copiar. Selecione e copie o código PIX manualmente.', 'erro')
+    }
   }
 
   async function confirmarPagamento() {

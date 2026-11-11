@@ -1,9 +1,11 @@
+import { useNotification } from '../../contexts/NotificationContext'
 import { FormEvent, useState } from 'react'
 import { isAxiosError } from 'axios'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 
 export default function RegisterPage() {
+  const notificar = useNotification()
   const navigate = useNavigate()
   const { register } = useAuth()
 
@@ -37,13 +39,14 @@ export default function RegisterPage() {
         senha,
       })
 
-      navigate('/login')
+      notificar('Conta criada com sucesso! Entre com seu e-mail e senha.')
+      navigate('/login', { state: { contaCriada: true } })
     } catch (error: unknown) {
       let mensagem = 'Não foi possível criar a conta. Tente novamente.'
       if (isAxiosError(error)) {
         if (!error.response) {
           mensagem = 'Não foi possível conectar à loja. Verifique sua conexão e tente novamente.'
-        } else if ([400, 409].includes(error.response.status)) {
+        } else if ([400, 409, 429].includes(error.response.status)) {
           const data = error.response.data
           const detalhes = Array.isArray(data?.mensagens)
             ? data.mensagens.filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0)

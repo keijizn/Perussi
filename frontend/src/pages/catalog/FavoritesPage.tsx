@@ -1,3 +1,4 @@
+import { useNotification } from '../../contexts/NotificationContext'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../services/api'
@@ -15,6 +16,7 @@ type Favorito = {
 }
 
 export default function FavoritesPage() {
+  const notificar = useNotification()
   const [favoritos, setFavoritos] = useState<Favorito[]>([])
   const [carregando, setCarregando] = useState(true)
 
@@ -32,11 +34,16 @@ export default function FavoritesPage() {
   }, [])
 
   async function removerFavorito(produtoId: string) {
-    await api.delete(`/favoritos/${produtoId}`)
+    try {
+      await api.delete(`/favoritos/${produtoId}`)
 
-    setFavoritos((atuais) =>
-      atuais.filter((favorito) => favorito.produtoId !== produtoId),
-    )
+      setFavoritos((atuais) =>
+        atuais.filter((favorito) => favorito.produtoId !== produtoId),
+      )
+      notificar('Produto removido dos favoritos.')
+    } catch {
+      notificar('Não foi possível remover o favorito. Tente novamente.', 'erro')
+    }
   }
 
   return (
