@@ -56,6 +56,11 @@ export default function AdminProductsPage() {
     const arquivo = event.target.files?.[0]
 
     if (!arquivo) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(arquivo.type) || arquivo.size > 5 * 1024 * 1024) {
+      setMensagem('Escolha uma imagem JPG, PNG ou WebP de até 5 MB.')
+      event.target.value = ''
+      return
+    }
 
     try {
       setEnviandoImagem(true)
@@ -77,7 +82,7 @@ export default function AdminProductsPage() {
       setMensagem('')
       notificar('Imagem enviada com sucesso.')
     } catch {
-      setMensagem('Erro ao enviar imagem.')
+      setMensagem('Não foi possível enviar a imagem. Verifique o arquivo e tente novamente.')
     } finally {
       setEnviandoImagem(false)
     }
@@ -89,6 +94,7 @@ export default function AdminProductsPage() {
 
   async function salvarProduto(event: FormEvent) {
     event.preventDefault()
+    if (enviandoImagem) return
     setMensagem('')
     setCarregando(true)
 
@@ -302,7 +308,8 @@ export default function AdminProductsPage() {
             <div className="space-y-3">
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={enviandoImagem}
                 onChange={uploadImagem}
                 className="w-full rounded-xl border border-black/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-zinc-900"
               />
@@ -334,7 +341,7 @@ export default function AdminProductsPage() {
             <div className="flex gap-3">
               <button
                 type="submit"
-                disabled={carregando}
+                disabled={carregando || enviandoImagem}
                 className="flex-1 rounded-full bg-zinc-950 px-6 py-3 text-sm font-medium text-white transition hover:bg-[#b98b7d] disabled:opacity-50 dark:bg-white dark:text-zinc-950"
               >
                 {carregando
