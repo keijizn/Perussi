@@ -12,6 +12,7 @@ import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.Map;
+import java.util.Locale;
 
 @Component
 public class WebhookSignatureVerifier {
@@ -43,7 +44,8 @@ public class WebhookSignatureVerifier {
         String ts = parts.getOrDefault("ts", "");
         String hash = parts.getOrDefault("v1", "");
         if (!ts.matches("[0-9]+") || !hash.matches("[a-fA-F0-9]{64}")) reject();
-        String manifest = "id:" + dataId + ";request-id:" + requestId.trim() + ";ts:" + ts + ";";
+        // Mercado Pago signs alphanumeric IDs in lowercase; keep the original ID for lookup.
+        String manifest = "id:" + dataId.toLowerCase(Locale.ROOT) + ";request-id:" + requestId.trim() + ";ts:" + ts + ";";
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(new SecretKeySpec(signingSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));

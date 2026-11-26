@@ -19,7 +19,7 @@ class OrdersWebhookTest {
         Mac mac = Mac.getInstance("HmacSHA256");
         mac.init(new SecretKeySpec("orders-secret".getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
         String signature = "ts=1742505638683,v1=" + HexFormat.of().formatHex(mac.doFinal(
-                "id:ORD01TEST;request-id:req;ts:1742505638683;".getBytes(StandardCharsets.UTF_8)));
+                "id:ord01test;request-id:req;ts:1742505638683;".getBytes(StandardCharsets.UTF_8)));
         verifier.verify(signature, "req", "ORD01TEST", payload);
         webhook.processarWebhook(payload);
         verify(service).sincronizar("ORD01TEST");
@@ -27,5 +27,16 @@ class OrdersWebhookTest {
                 () -> verifier.verify(signature, "req", "ORD01TEST", Map.of("data", Map.of("id", "ORD02OTHER"))));
         assertThrows(org.springframework.web.server.ResponseStatusException.class,
                 () -> new WebhookSignatureVerifier("orders-secret", "wrong-secret").verify(signature, "req", "ORD01TEST", payload));
+    }
+
+    @Test void numericPaymentStillUsesLegacySecret() throws Exception {
+        var verifier = new WebhookSignatureVerifier("legacy-secret", "orders-secret");
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(new SecretKeySpec("legacy-secret".getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+        String signature = "ts=1742505638683,v1=" + HexFormat.of().formatHex(mac.doFinal(
+                "id:123456;request-id:req;ts:1742505638683;".getBytes(StandardCharsets.UTF_8)));
+        verifier.verify(signature, "req", "123456", Map.of("data", Map.of("id", "123456")));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> verifier.verify(signature, "other", "123456", Map.of("data", Map.of("id", "123456"))));
     }
 }
